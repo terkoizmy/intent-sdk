@@ -1,0 +1,8 @@
+{
+  "unichainSepolia": {
+    "proxy": "0x7066f6dFc1C652c165Bc9BB10085fD95719b5eA6",
+    "implementation": "0x9Ccec26C4bb63A5337a39C29E26354dA97A7A272",
+    "deployedAt": "2026-02-25T07:01:42.564Z",
+    "chainId": 1301
+  }
+}

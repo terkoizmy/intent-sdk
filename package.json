@@ -1,0 +1,61 @@
+{
+  "name": "@terkoizmy/intent-sdk",
+  "version": "1.0.0",
+  "description": "Lightweight intent parser & solver SDK for blockchain transactions — parse natural language into structured intents, solve cross-chain bridges, and settle on-chain",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "intent",
+    "parser",
+    "solver",
+    "blockchain",
+    "web3",
+    "cross-chain",
+    "bridge",
+    "erc-7683",
+    "nlp",
+    "defi"
+  ],
+  "author": "Terkoizmy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/terkoizmy/intent-sdk.git"
+  },
+  "homepage": "https://github.com/terkoizmy/intent-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/terkoizmy/intent-sdk/issues"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "bun --watch src/index.ts",
+    "test": "bun test",
+    "clean": "rimraf dist",
+    "prepublishOnly": "bun run clean && bun run build"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.9",
+    "bun-types": "^1.3.9",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "ethers": "^6.16.0",
+    "viem": "^2.46.2",
+    "zod": "^4.3.6"
+  }
+}

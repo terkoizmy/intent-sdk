@@ -1,0 +1,15 @@
+# Exclude everything not needed in the published package
+tests/
+contracts/
+examples/
+scripts/
+artifacts/
+docs/
+.gemini/
+.env*
+.gitignore
+tsconfig.json
+tsconfig.build.json
+tmp_*
+*.test.ts
+bun.lockb
