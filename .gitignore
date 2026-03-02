@@ -54,6 +54,9 @@ bower_components
 
 build/Release
 
+# Artifacts
+artifacts/
+
 # Dependency directories
 
 node_modules/
