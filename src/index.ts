@@ -20,7 +20,7 @@ export { IntentParser } from "./parser";
 export { IntentSolver } from "./solver";
 
 // ─── Factory ────────────────────────────────────
-export { createIntentSDK } from "./sdk-factory";
+// export { createIntentSDK } from "./sdk-factory";
 
 // ─── Parser Types ───────────────────────────────
 export type { ParseResult, ParserConfig } from "./types";

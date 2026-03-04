@@ -224,20 +224,38 @@ export function mergeEntities(entities: any, intentType: string, text?: string):
         parameters.inputAmount = entities.amounts[0].value.toString();
       }
 
-      // Use specific FROM/TO logic for bridge
+      // Find all chain mentions in the text
       const chainNames = Object.keys(CHAIN_ALIASES).join('|');
+      const chainRegex = new RegExp(`(?:from|to|on|in)?\\s*(${chainNames})\\b`, 'gi');
 
+      const foundChains: string[] = [];
+      let match;
+      while ((match = chainRegex.exec(lowerText)) !== null) {
+        const matched = match[1].toLowerCase();
+        const chainName = CHAIN_ALIASES[matched] || matched.charAt(0).toUpperCase() + matched.slice(1);
+        if (!foundChains.includes(chainName)) {
+          foundChains.push(chainName);
+        }
+      }
+
+      // Assign first found chain to source, second to target
+      if (foundChains.length >= 1) {
+        parameters.sourceChain = foundChains[0];
+      }
+      if (foundChains.length >= 2) {
+        parameters.targetChain = foundChains[1];
+      }
+
+      // Fallback: strict "from/to" parsing to override if specific syntax is used
       const sourceMatch = lowerText.match(new RegExp(`from\\s+(${chainNames})`, 'i'));
       if (sourceMatch) {
         const matched = sourceMatch[1].toLowerCase();
         parameters.sourceChain = CHAIN_ALIASES[matched] || matched.charAt(0).toUpperCase() + matched.slice(1);
-      } else {
-        // Fallback: try generic extraction if "from" not explicitly present but "on chain" is? 
-        // Bridge usually requires explicit source/dest.
       }
 
       const targetMatch = lowerText.match(new RegExp(`to\\s+(${chainNames})`, 'i'));
-      if (targetMatch) {
+      if (targetMatch && lowerText.indexOf("to " + targetMatch[1].toLowerCase()) > lowerText.indexOf("from ")) {
+        // Only apply "to Chain" if it comes after "from", or if it's explicitly "to Chain"
         const matched = targetMatch[1].toLowerCase();
         parameters.targetChain = CHAIN_ALIASES[matched] || matched.charAt(0).toUpperCase() + matched.slice(1);
       }

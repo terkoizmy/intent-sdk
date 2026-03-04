@@ -115,16 +115,26 @@ export class TokenExtractor {
     }
 
     // 2. Match fungible token symbols
-    const symbolPattern = /\b([A-Z]{2,10})\b/g;
+    // Match 2-10 letter words. Add "i" flag for case-insensitivity.
+    const symbolPattern = /\b([a-zA-Z]{2,10})\b/g;
     let match;
 
     while ((match = symbolPattern.exec(text)) !== null) {
-      const symbol = match[1];
+      const originalPattern = match[1];
+      const symbol = originalPattern.toUpperCase();
       const start = match.index;
       const end = start + match[0].length;
 
       // Skip common English words and action keywords
       if (COMMON_WORDS.has(symbol)) continue;
+
+      // Filter out normal lowercase English words by requiring tokens to be:
+      // 1. All uppercase originally (e.g. "USDC", "ETH")
+      // 2. Or explicitly in our knownTokens list (so "matic" or "MATiC" works if registered)
+      // 3. Or mixed-case but explicitly standard like "WETH", "wBTC", etc (which knownTokens covers)
+      const isAllUpperCase = originalPattern === symbol;
+      const isKnownToken = !!this.knownTokens[symbol];
+      if (!isAllUpperCase && !isKnownToken) continue;
 
       // Skip if overlaps with already matched NFT
       const isOverlapping = matchedRanges.some(
