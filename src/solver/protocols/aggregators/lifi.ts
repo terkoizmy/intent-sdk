@@ -26,6 +26,16 @@ export interface LiFiQuoteRequest {
     slippage?: string;
 }
 
+export interface LiFiToken {
+    symbol: string;
+    address: string;
+    decimals: number;
+    chainId: number;
+    name?: string;
+    logoURI?: string;
+    priceUSD?: string;
+}
+
 export interface LiFiQuoteResponse {
     type: string;
     id: string;
@@ -33,8 +43,8 @@ export interface LiFiQuoteResponse {
     action: {
         fromChainId: number;
         toChainId: number;
-        fromToken: any;
-        toToken: any;
+        fromToken: LiFiToken;
+        toToken: LiFiToken;
         fromAmount: string;
         slippage: number;
     };
@@ -51,7 +61,7 @@ export interface LiFiQuoteResponse {
             description: string;
             amount: string;
             amountUSD: string;
-            token: any;
+            token: LiFiToken;
         }>;
         gasCosts: Array<{
             type: string;
@@ -59,7 +69,7 @@ export interface LiFiQuoteResponse {
             amountUSD: string;
             estimate: string;
             limit: string;
-            token: any;
+            token: LiFiToken;
         }>;
     };
     transactionRequest?: {
@@ -122,8 +132,8 @@ export class LiFiProtocol extends BaseProtocol implements IBridgeProtocol {
         let data: LiFiQuoteResponse;
         try {
             data = await this.httpClient.get(url.toString(), this.defaultHeaders) as LiFiQuoteResponse;
-        } catch (error: any) {
-            throw new Error(`Li.Fi API Error: ${error.message}`);
+        } catch (error: unknown) {
+            throw new Error(`Li.Fi API Error: ${error instanceof Error ? error.message : String(error)}`);
         }
 
         // Extract total fees (gas + protocol fees) in smallest unit of the toToken

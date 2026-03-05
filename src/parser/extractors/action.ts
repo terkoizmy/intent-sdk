@@ -24,7 +24,7 @@ export class ActionExtractor {
    * "Swap USDC to ETH" -> [{ action: "swap", category: "trade" }]
    * "Maximize my yield" -> [{ action: "maximize", category: "yield" }]
    *
-   * TODO:
+   * STEPS:
    * 1. Match action verbs (swap, send, buy, etc.)
    * 2. Normalize to infinitive form
    * 3. Categorize action type
@@ -32,8 +32,6 @@ export class ActionExtractor {
    */
   extract(text: string): ActionEntity[] {
     const entities: ActionEntity[] = [];
-
-    // TODO: Implement extraction logic
 
     const lowerText = text.toLowerCase();
 

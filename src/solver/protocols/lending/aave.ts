@@ -162,13 +162,14 @@ export class AaveProtocol extends BaseProtocol {
             const apy = (Math.pow(1 + depositAPR / SECONDS_PER_YEAR, SECONDS_PER_YEAR) - 1) * 100;
 
             return apy;
-        } catch (error: any) {
-            if (error.message.includes("execution reverted")) {
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : String(error);
+            if (msg.includes("execution reverted")) {
                 // Aave PoolDataProvider reverts if the token is not an active reserve
                 return 0;
             }
-            console.error(`[Aave] Failed to fetch APY for ${token} on chain ${chainId}:`, error.message);
-            throw new Error(`Failed to fetch APY from Aave: ${error.message}`);
+            console.error(`[Aave] Failed to fetch APY for ${token} on chain ${chainId}:`, msg);
+            throw new Error(`Failed to fetch APY from Aave: ${msg}`);
         }
     }
 

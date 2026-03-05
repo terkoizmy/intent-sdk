@@ -17,8 +17,10 @@ import type { Address } from "../types/common";
 export const SEPOLIA_CONFIG: ChainConfig = {
     id: 11155111,
     name: "Sepolia",
-    rpcUrl: "", // TODO: Set via SEPOLIA_RPC_URL env var
-    fallbackRpcUrls: [],
+    rpcUrl: process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
+    fallbackRpcUrls: [
+        "https://rpc.sepolia.org",
+    ],
     nativeCurrency: {
         name: "Sepolia Ether",
         symbol: "ETH",
@@ -38,8 +40,10 @@ export const SEPOLIA_CONFIG: ChainConfig = {
 export const ARBITRUM_SEPOLIA_CONFIG: ChainConfig = {
     id: 421614,
     name: "Arbitrum Sepolia",
-    rpcUrl: "", // TODO: Set via ARB_SEPOLIA_RPC_URL env var
-    fallbackRpcUrls: [],
+    rpcUrl: process.env.ARB_SEPOLIA_RPC_URL || "https://sepolia-rollup.arbitrum.io/rpc",
+    fallbackRpcUrls: [
+        "https://arbitrum-sepolia-rpc.publicnode.com",
+    ],
     nativeCurrency: {
         name: "Ether",
         symbol: "ETH",
@@ -59,7 +63,7 @@ export const ARBITRUM_SEPOLIA_CONFIG: ChainConfig = {
 export const UNICHAIN_SEPOLIA_CONFIG: ChainConfig = {
     id: 1301,
     name: "Unichain Sepolia",
-    rpcUrl: "", // TODO: Set via UNICHAIN_SEPOLIA_RPC_URL env var
+    rpcUrl: process.env.UNICHAIN_SEPOLIA_RPC_URL || "https://sepolia.unichain.org",
     fallbackRpcUrls: [],
     nativeCurrency: {
         name: "Ether",
@@ -68,7 +72,7 @@ export const UNICHAIN_SEPOLIA_CONFIG: ChainConfig = {
     },
     explorer: "https://unichain-sepolia.blockscout.com",
     contracts: {
-        usdc: "0x31d0220469e10c4E71834a79b1f276d740d3768F" as Address, // Confirm before mainnet
+        usdc: "0x31d0220469e10c4E71834a79b1f276d740d3768F" as Address,
     },
     blockTimeSeconds: 1,
     confirmations: 1,
@@ -80,8 +84,10 @@ export const UNICHAIN_SEPOLIA_CONFIG: ChainConfig = {
 export const BASE_SEPOLIA_CONFIG: ChainConfig = {
     id: 84532,
     name: "Base Sepolia",
-    rpcUrl: "", // TODO: Set via BASE_SEPOLIA_RPC_URL env var
-    fallbackRpcUrls: [],
+    rpcUrl: process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
+    fallbackRpcUrls: [
+        "https://base-sepolia-rpc.publicnode.com",
+    ],
     nativeCurrency: {
         name: "Ether",
         symbol: "ETH",

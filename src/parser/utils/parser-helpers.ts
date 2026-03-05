@@ -1,4 +1,33 @@
 /**
+ * Extracted entity types used by the parser pipeline.
+ */
+export interface ExtractedToken {
+  symbol: string;
+  address?: string;
+  type?: "fungible" | "collection";
+}
+
+export interface ExtractedAmount {
+  value: number | string;
+}
+
+export interface ExtractedConstraint {
+  type: string;
+  value: unknown;
+}
+
+export interface ExtractedEntities {
+  tokens: ExtractedToken[];
+  amounts: ExtractedAmount[];
+  actions: string[];
+  constraints: ExtractedConstraint[];
+}
+
+// Re-export the canonical IntentTemplate from types/templates
+export type { IntentTemplate } from "../../types/templates";
+import type { IntentTemplate } from "../../types/templates";
+
+/**
  * Calculate confidence score based on extracted entities
  *
  * INPUT: Extracted entities and intent type
@@ -10,8 +39,8 @@
  * - Pattern match strength
  */
 export function calculateConfidence(
-  parameters: Record<string, any>,
-  template: any,
+  parameters: Record<string, unknown>,
+  template: IntentTemplate,
 ): number {
   if (!template) return 0;
 
@@ -87,8 +116,8 @@ const CHAIN_ALIASES: Record<string, string> = {
  * INPUT: Extracted entities, intent type
  * OUTPUT: IntentParameters
  */
-export function mergeEntities(entities: any, intentType: string, text?: string): any {
-  const parameters: any = {};
+export function mergeEntities(entities: ExtractedEntities, intentType: string, text?: string): Record<string, unknown> {
+  const parameters: Record<string, unknown> = {};
   const lowerText = text?.toLowerCase() || "";
 
   // Map entities based on intent type strategies

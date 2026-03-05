@@ -20,7 +20,15 @@ export class IntentFilter {
     /** Track seen intentIds to prevent duplicate processing */
     private seen: Set<string> = new Set();
 
-    constructor(private readonly agent: LiquidityAgent) { }
+    /** Maximum number of entries in the seen cache before pruning */
+    private readonly maxCacheSize: number;
+
+    constructor(
+        private readonly agent: LiquidityAgent,
+        options?: { maxCacheSize?: number },
+    ) {
+        this.maxCacheSize = options?.maxCacheSize ?? 10_000;
+    }
 
     // ─────────────────────────────────────────
     // Public API
@@ -42,7 +50,7 @@ export class IntentFilter {
 
         // Mark as seen immediately to prevent concurrent processors
         // from racing on the same intent
-        this.seen.add(intent.intentId);
+        this.addToSeen(intent.intentId);
 
         // 2. Type check — only handle bridge intents
         if (intent.parsedIntent.intentType !== "bridge") {
@@ -64,7 +72,7 @@ export class IntentFilter {
      * @param intentId - The intentId to mark as solved
      */
     markSolved(intentId: string): void {
-        this.seen.add(intentId);
+        this.addToSeen(intentId);
     }
 
     /**
@@ -81,5 +89,30 @@ export class IntentFilter {
      */
     clearCache(): void {
         this.seen.clear();
+    }
+
+    // ─────────────────────────────────────────
+    // Private
+    // ─────────────────────────────────────────
+
+    /**
+     * Add an intentId to the seen cache, pruning oldest entries
+     * if the cache exceeds maxCacheSize.
+     *
+     * Pruning strategy: drop the oldest half of entries (Set iterates
+     * in insertion order) to amortize pruning cost.
+     */
+    private addToSeen(intentId: string): void {
+        this.seen.add(intentId);
+
+        if (this.seen.size > this.maxCacheSize) {
+            const deleteCount = Math.floor(this.maxCacheSize / 2);
+            let i = 0;
+            for (const id of this.seen) {
+                if (i >= deleteCount) break;
+                this.seen.delete(id);
+                i++;
+            }
+        }
     }
 }

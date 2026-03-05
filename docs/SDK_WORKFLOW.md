@@ -381,10 +381,11 @@ const result = await parser.parse("Swap 1 ETH for USDC on Uniswap");
 | File | Fungsi |
 |------|--------|
 | `src/parser/index.ts` | Entry point parser |
-| `src/parser/tokenizer.ts` | Tokenisasi input text |
+| `src/parser/classifiers/intent-classifier.ts` | Klasifikasi intent type (bridge, send, swap, claim, yield) |
+| `src/parser/extractors/*.ts` | Ekstraksi entities: action, amount, chain, token |
 | `src/parser/templates/*.ts` | Template per intent type (bridge, send, swap, claim, yield) |
-| `src/parser/constraints.ts` | Ekstraksi constraint (slippage, deadline, priority) |
-| `src/parser/parser-helpers.ts` | Merge entities, normalisasi token/chain |
+| `src/parser/utils/parser-helpers.ts` | Merge entities, normalisasi token/chain, confidence scoring |
+| `src/parser/validators/schema.ts` | Validasi schema parameter via Zod |
 | `src/types/intent.ts` | Type definitions: `StructuredIntent`, `ParseResult` |
 
 ### Solver (Stage 2)
@@ -427,10 +428,10 @@ const result = await parser.parse("Swap 1 ETH for USDC on Uniswap");
 |----------|--------|
 | Parser (Stage 1) | ✅ **Produksi-siap** — semua template & test lulus |
 | Solver Logic (Stage 2) | ✅ **Fitur lengkap** — semua modul terkoneksi |
-| Smart Contract | ✅ **Deployed di Hardhat** — test suite lulus |
-| Eksekusi Live (RPC) | ⏳ **Mock** — hanya simulate mode yang aktif |
+| Smart Contract | ✅ **Deployed di Hardhat & Unichain Sepolia** — test suite lulus |
+| Eksekusi Live (RPC) | ✅ **Aktif** — live mode menggunakan Viem untuk ERC-20 transfer |
 | Mempool Server | ⏳ **Mock** — belum ada backend server nyata |
-| Bridge Aggregator | ⏳ **Stub** — Swing API belum diintegrasikan |
+| Bridge Aggregator | ✅ **LiFi & Swing** — adapter terimplementasi |
 | Lending Protocol | ⏳ **Stub** — Aave adapter belum diimplementasikan |
 
 > **Stage 3** akan fokus pada penggantian semua mock layer dengan koneksi live

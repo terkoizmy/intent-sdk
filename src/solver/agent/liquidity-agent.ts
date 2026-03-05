@@ -35,6 +35,8 @@ import { encodeTransferData } from "../../shared/utils/erc20-utils";
 export class LiquidityAgent {
     private status: AgentStatus = "idle";
     private agentAddress: Address | null = null;
+    /** Number of intents currently being solved concurrently */
+    private activeSolves: number = 0;
 
     constructor(
         private readonly inventoryManager: InventoryManager,
@@ -133,6 +135,17 @@ export class LiquidityAgent {
      */
     async solve(intent: SolverIntent): Promise<SolutionResult> {
         const startTime = Date.now();
+
+        // B14: Enforce maxConcurrentIntents
+        const maxConcurrent = this.config.agent.maxConcurrentIntents ?? 5;
+        if (this.activeSolves >= maxConcurrent) {
+            return {
+                success: false,
+                error: `Max concurrent intents reached (${maxConcurrent}). Try again later.`,
+            };
+        }
+
+        this.activeSolves++;
         this.status = "processing";
         try {
 
@@ -187,7 +200,7 @@ export class LiquidityAgent {
                     amount,
                     intent.intentId,
                 );
-            } catch (sendError: any) {
+            } catch (sendError: unknown) {
                 // Unlock on failure
                 this.inventoryManager.unlockAmount(
                     bridgeIntent.targetChain,
@@ -195,28 +208,39 @@ export class LiquidityAgent {
                     amount,
                     intent.intentId,
                 );
+                const msg = sendError instanceof Error ? sendError.message : String(sendError);
                 return this.errorResult(
-                    `Send failed: ${sendError.message || String(sendError)}`,
+                    `Send failed: ${msg}`,
                     startTime,
                     bridgeIntent,
                 );
             }
 
-            // 7. Trigger settlement
-            try {
-                await this.settlementManager.settleIntent(intent, targetTxHash);
-            } catch (settlementError: any) {
-                // Settlement failure is non-fatal for the solve result —
-                // the funds were already sent to the user. Settlement will be retried
-                // by the watcher. Log but don't fail the result.
+            // B9: Re-check deadline before settlement to prevent race conditions
+            const nowBeforeSettle = Math.floor(Date.now() / 1000);
+            if (intent.deadline <= nowBeforeSettle) {
                 console.warn(
-                    `Settlement for ${intent.intentId} deferred: ${settlementError.message}`,
+                    `Intent ${intent.intentId} deadline expired mid-solve — skipping settlement (funds already sent).`,
                 );
+            } else {
+                // 7. Trigger settlement
+                try {
+                    await this.settlementManager.settleIntent(intent, targetTxHash);
+                } catch (settlementError: unknown) {
+                    // Settlement failure is non-fatal for the solve result —
+                    // the funds were already sent to the user. Settlement will be retried
+                    // by the watcher. Log but don't fail the result.
+                    const msg = settlementError instanceof Error ? settlementError.message : String(settlementError);
+                    console.warn(
+                        `Settlement for ${intent.intentId} deferred: ${msg}`,
+                    );
+                }
             }
             // 8. Build success result
             const durationMs = Date.now() - startTime;
 
             this.status = "idle";
+            this.activeSolves = Math.max(0, this.activeSolves - 1);
             return {
                 success: true,
                 txHash: targetTxHash,
@@ -234,11 +258,13 @@ export class LiquidityAgent {
                     },
                 },
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             this.status = "idle";
+            this.activeSolves = Math.max(0, this.activeSolves - 1);
+            const msg = error instanceof Error ? error.message : String(error);
             return {
                 success: false,
-                error: error.message || String(error),
+                error: msg,
             };
         }
     }

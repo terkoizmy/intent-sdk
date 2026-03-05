@@ -18,8 +18,8 @@ import type { Transaction } from "../../types/execution";
 // ---------------------------------------------------------------------------
 
 export interface IHttpClient {
-    get(url: string, headers?: Record<string, string>): Promise<any>;
-    post(url: string, body: any, headers?: Record<string, string>): Promise<any>;
+    get(url: string, headers?: Record<string, string>): Promise<unknown>;
+    post(url: string, body: unknown, headers?: Record<string, string>): Promise<unknown>;
 }
 
 /** Token info returned by Swing /tokens endpoint */
@@ -29,6 +29,44 @@ export interface SwingToken {
     decimals: number;
     name: string;
     chainId: number;
+}
+
+/** Best integration within a Swing route */
+export interface SwingQuoteIntegration {
+    amountOut: string;
+    fee: string;
+    estimatedTime: number;
+    priceImpact: number;
+}
+
+/** A single route in the Swing quote response */
+export interface SwingRoute {
+    quote: {
+        integration: SwingQuoteIntegration;
+    };
+}
+
+/** Top-level Swing /transfer/quote response */
+export interface SwingQuoteResponse {
+    routes: SwingRoute[];
+}
+
+/** Swing /transfer/send tx object */
+export interface SwingTxData {
+    to: string;
+    data: string;
+    value?: string;
+    gas?: string;
+}
+
+/** Top-level Swing /transfer/send response */
+export interface SwingBuildTxResponse {
+    tx: SwingTxData;
+}
+
+/** Top-level Swing /transfer/status response */
+export interface SwingStatusResponse {
+    status: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,12 +116,12 @@ export class FetchHttpClient implements IHttpClient {
         return res.json();
     }
 
-    async get(url: string, headers?: Record<string, string>, attempt = 1): Promise<any> {
+    async get(url: string, headers?: Record<string, string>, attempt = 1): Promise<unknown> {
         const res = await fetch(url, { method: "GET", headers });
         return this.handleResponse(res, () => this.get(url, headers, attempt + 1), attempt);
     }
 
-    async post(url: string, body: any, headers?: Record<string, string>, attempt = 1): Promise<any> {
+    async post(url: string, body: unknown, headers?: Record<string, string>, attempt = 1): Promise<unknown> {
         const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json", ...headers },
@@ -129,17 +167,16 @@ export class SwingProtocol extends BaseProtocol {
         const url = `${this.baseUrl}/tokens?chain=${chainId}`;
 
         try {
-            const data = await this.httpClient.get(url, this.headers);
+            const data = await this.httpClient.get(url, this.headers) as { tokens?: SwingToken[] } | SwingToken[];
 
             // Note: Swing often returns an array directly, but sometimes it might be `{ tokens: [] }`
-            // Let's handle both dynamically
-            const items = Array.isArray(data) ? data : data.tokens;
+            const items = Array.isArray(data) ? data : (data as { tokens?: SwingToken[] }).tokens;
 
             if (!Array.isArray(items)) {
                 throw new Error(`Invalid response format from Swing tokens API for chain ${chainId}`);
             }
 
-            return items.map((t: any) => ({
+            return items.map((t: SwingToken) => ({
                 symbol: t.symbol,
                 address: t.address,
                 decimals: t.decimals,
@@ -169,7 +206,7 @@ export class SwingProtocol extends BaseProtocol {
         url.searchParams.append("toToken", params.token);
         url.searchParams.append("amount", params.amount.toString());
 
-        const data = await this.httpClient.get(url.toString(), this.headers);
+        const data = await this.httpClient.get(url.toString(), this.headers) as SwingQuoteResponse;
 
         // Validate response shape
         if (!data.routes || data.routes.length === 0) {
@@ -221,7 +258,7 @@ export class SwingProtocol extends BaseProtocol {
             ]
         };
 
-        const data = await this.httpClient.post(`${this.baseUrl}/transfer/send`, body, this.headers);
+        const data = await this.httpClient.post(`${this.baseUrl}/transfer/send`, body, this.headers) as SwingBuildTxResponse;
 
         if (!data.tx) {
             throw new Error("Swing API did not return transaction data");
@@ -229,7 +266,7 @@ export class SwingProtocol extends BaseProtocol {
 
         return [
             {
-                to: data.tx.to,
+                to: data.tx.to as `0x${string}`,
                 data: data.tx.data,
                 value: data.tx.value || "0",
                 chainId: params.fromChain,
@@ -246,7 +283,7 @@ export class SwingProtocol extends BaseProtocol {
      * Get the status of an ongoing bridge transfer.
      */
     async getTransferStatus(transferId: string): Promise<"pending" | "done" | "failed"> {
-        const data = await this.httpClient.get(`${this.baseUrl}/transfer/status/${transferId}`, this.headers);
+        const data = await this.httpClient.get(`${this.baseUrl}/transfer/status/${transferId}`, this.headers) as SwingStatusResponse;
         const statusStr = data.status?.toLowerCase();
 
         if (statusStr === "success" || statusStr === "done") return "done";

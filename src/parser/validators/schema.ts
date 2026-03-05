@@ -57,12 +57,10 @@ const StructuredIntentSchema = z.object({
 });
 
 /**
- * Validate structured intent
+ * Validate structured intent against Zod schema
  *
  * INPUT: StructuredIntent
  * OUTPUT: { success: boolean, error?: string }
- *
- * TODO: Implement validation logic
  */
 export function validateIntent(intent: StructuredIntent): {
   success: boolean;
@@ -75,8 +73,7 @@ export function validateIntent(intent: StructuredIntent): {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        // @ts-ignore
-        error: error.errors.map((e: any) => e.message).join(", "),
+        error: error.issues.map((e: z.ZodIssue) => e.message).join(", "),
       };
     }
     return {

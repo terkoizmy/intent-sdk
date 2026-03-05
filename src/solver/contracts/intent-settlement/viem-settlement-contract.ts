@@ -199,11 +199,9 @@ export class ViemSettlementContract {
                 args: [order, solverSignature],
                 account: this.walletClient.account,
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(`[Settlement] Simulation failed for claim():`);
-            const fs = require('fs');
-            fs.writeFileSync('debug.json', JSON.stringify(error, (key, value) => typeof value === 'bigint' ? value.toString() : value, 2));
-            throw new Error(`Simulation failed: ${error.message}`);
+            throw new Error(`Simulation failed: ${error instanceof Error ? error.message : String(error)}`);
         }
 
         const txHash = await this.walletClient.writeContract({

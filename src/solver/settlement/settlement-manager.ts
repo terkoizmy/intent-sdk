@@ -40,6 +40,13 @@ export interface SettlementConfig {
 
     /** Oracle address that signs the proof. If not provided, assumes solver is oracle (MVP). */
     oracleAddress?: Address;
+
+    /**
+     * Callback invoked when a settlement has permanently failed
+     * (i.e., retries exhausted). Use this for alerting, logging to
+     * external systems, or triggering manual recovery.
+     */
+    onPermanentFailure?: (intentId: string, error: string, attempts: number) => void;
 }
 
 export const DEFAULT_SETTLEMENT_CONFIG: SettlementConfig = {
@@ -177,9 +184,10 @@ export class SettlementManager {
             settlement.settledAt = Math.floor(Date.now() / 1000);
             return settlement;
 
-        } catch (error: any) {
-            await this.handleClaimFailure(intent.intentId, error);
-            throw new ClaimFailedError(intent.intentId, error.message || String(error));
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : String(error);
+            await this.handleClaimFailure(intent.intentId, msg);
+            throw new ClaimFailedError(intent.intentId, msg);
         }
     }
 
@@ -199,7 +207,7 @@ export class SettlementManager {
                     if (intent) {
                         try {
                             await this.settleIntent(intent, settlement.targetTx);
-                        } catch (e: any) {
+                        } catch (e: unknown) {
                             if (!(e instanceof ClaimFailedError)) {
                                 console.error(`Unexpected error in watchPendingSettlements for ${settlement.intentId}:`, e);
                             }
@@ -229,19 +237,28 @@ export class SettlementManager {
      * @param intentId - Intent whose claim failed
      * @param error - Error that caused the failure
      */
-    async handleClaimFailure(intentId: string, error: Error): Promise<void> {
+    async handleClaimFailure(intentId: string, errorMessage: string): Promise<void> {
         const settlement = this.settlements.get(intentId);
         if (!settlement) return;
 
         settlement.claimAttempts += 1;
-        settlement.error = error.message;
+        settlement.error = errorMessage;
 
         settlement.status = "failed";
 
         if (settlement.claimAttempts >= this.config.maxClaimRetries) {
-            console.error(`Intent ${intentId} settlement failed permanently after ${settlement.claimAttempts} attempts. Error: ${error.message}`);
+            console.error(`Intent ${intentId} settlement failed permanently after ${settlement.claimAttempts} attempts. Error: ${errorMessage}`);
+
+            // B8: Invoke onPermanentFailure callback if configured
+            if (this.config.onPermanentFailure) {
+                try {
+                    this.config.onPermanentFailure(intentId, errorMessage, settlement.claimAttempts);
+                } catch {
+                    // Never let the callback crash the settlement manager
+                }
+            }
         } else {
-            console.warn(`Intent ${intentId} claim failed, will retry. Error: ${error.message}`);
+            console.warn(`Intent ${intentId} claim failed, will retry. Error: ${errorMessage}`);
         }
     }
 

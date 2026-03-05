@@ -57,7 +57,7 @@ function mockContract() {
         open: async () => ({}),
         refund: async () => ({}),
         waitForLockEvent: async () => true,
-        getAddress: async () => "0xContractAddress",
+        getAddress: async () => "0x" + "cc".repeat(20), // valid 20-byte address
     };
 }
 
@@ -268,7 +268,7 @@ describe("SettlementManager", () => {
                 startedAt: 123,
                 claimAttempts: 0
             });
-            await manager.handleClaimFailure(intentId, new Error("Test"));
+            await manager.handleClaimFailure(intentId, "Test error message");
             const s = manager.getSettlement(intentId);
             expect(s?.claimAttempts).toBe(1);
             expect(s?.status).toBe("failed");
@@ -284,10 +284,48 @@ describe("SettlementManager", () => {
                 startedAt: 123,
                 claimAttempts: 2
             });
-            await manager.handleClaimFailure(intentId, new Error("Test"));
+            await manager.handleClaimFailure(intentId, "Test error message");
             const s = manager.getSettlement(intentId);
             expect(s?.claimAttempts).toBe(3);
             expect(s?.status).toBe("failed");
+        });
+
+        // T4 — onPermanentFailure callback is invoked after retries exhausted
+        test("T4: onPermanentFailure callback is called with intentId and error", async () => {
+            const callbacks: Array<{ intentId: string; error: string; attempts: number }> = [];
+
+            const generator = new ProofGenerator(mockSigner(), mockProvider());
+            const verifier = new ProofVerifier();
+            const failManager = new SettlementManager(
+                generator,
+                verifier,
+                mockContract() as any,
+                {
+                    ...DEFAULT_SETTLEMENT_CONFIG,
+                    maxClaimRetries: 2,
+                    onPermanentFailure: (intentId, error, attempts) => {
+                        callbacks.push({ intentId, error, attempts });
+                    },
+                },
+            );
+
+            const intentId = "0x" + "55".repeat(32);
+            failManager["settlements"].set(intentId, {
+                intentId,
+                solver: SOLVER_ADDRESS,
+                targetTx: MOCK_TX_HASH,
+                status: "failed",
+                startedAt: 123,
+                claimAttempts: 1, // one short of maxClaimRetries=2
+            });
+
+            // This call pushes it to 2 = maxClaimRetries → permanent failure
+            await failManager.handleClaimFailure(intentId, "Nonce too low");
+
+            expect(callbacks).toHaveLength(1);
+            expect(callbacks[0]!.intentId).toBe(intentId);
+            expect(callbacks[0]!.error).toContain("Nonce too low");
+            expect(callbacks[0]!.attempts).toBe(2);
         });
     });
 

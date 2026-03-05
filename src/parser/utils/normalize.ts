@@ -10,12 +10,8 @@
  * 3. Remove extra spaces
  * 4. Normalize quotes
  * 5. Handle common abbreviations
- *
- * TODO: Implement normalization logic
  */
 export function normalizeText(text: string): string {
-  // TODO: Implement normalization
-
   return text
     .trim()
     .replace(/\s+/g, " ") // Multiple spaces -> single space
@@ -47,7 +43,7 @@ export function normalizeTokenSymbol(token: string): string {
  * (1000, "USDC") -> "1000000000" (USDC has 6 decimals)
  * (1, "ETH") -> "1000000000000000000" (ETH has 18 decimals)
  *
- * TODO: Implement decimal conversion
+ * Parse amount to smallest unit representation.
  */
 export function parseAmountWithDecimals(amount: number, token: string): string {
   const decimals = getTokenDecimals(token);
@@ -57,9 +53,8 @@ export function parseAmountWithDecimals(amount: number, token: string): string {
 }
 
 /**
- * Get token decimals
- *
- * TODO: Implement decimal lookup
+ * Get token decimals for well-known tokens.
+ * Falls back to 18 decimals for unknown tokens.
  */
 function getTokenDecimals(token: string): number {
   const decimalsMap: Record<string, number> = {

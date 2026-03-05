@@ -51,6 +51,22 @@ const INVENTORY_TIERS: Array<{ threshold: number; multiplierNum: bigint; multipl
 /** Capacity below this triggers hard rejection regardless of price */
 const CRITICAL_CAPACITY_FLOOR = 0.05;
 
+/**
+ * Safely compute capacity ratio (current / total) as a JS number.
+ * Uses BigInt-based scaling when operands exceed Number.MAX_SAFE_INTEGER
+ * to prevent silent precision loss in floating-point conversion.
+ */
+function safeCapacityRatio(current: bigint, total: bigint): number {
+    if (total === 0n) return 0;
+    // If both values fit in a safe JS number, use plain division
+    if (current <= BigInt(Number.MAX_SAFE_INTEGER) && total <= BigInt(Number.MAX_SAFE_INTEGER)) {
+        return Number(current) / Number(total);
+    }
+    // Scale to 1e6 precision via BigInt division to avoid float overflow
+    const SCALE = 1_000_000n;
+    return Number((current * SCALE) / total) / Number(SCALE);
+}
+
 /** Default settlement token for inventory checks */
 const DEFAULT_INVENTORY_TOKEN = "USDC";
 
@@ -182,7 +198,7 @@ export class DynamicPricing {
 
         if (total === 0n) return true; // Should be caught by canFulfill, but safety guard
 
-        const capacity = Number(current) / Number(total);
+        const capacity = safeCapacityRatio(current, total);
 
         // Reject if capacity is critically low to force rebalancing before draining chain
         return capacity < CRITICAL_CAPACITY_FLOOR;
@@ -204,7 +220,7 @@ export class DynamicPricing {
         // No inventory anywhere → critical tier
         if (total === 0n) return INVENTORY_TIERS[INVENTORY_TIERS.length - 1]!;
 
-        const capacity = Number(current) / Number(total);
+        const capacity = safeCapacityRatio(current, total);
 
         // Find first matching tier (ordered highest threshold → lowest)
         for (const tier of INVENTORY_TIERS) {

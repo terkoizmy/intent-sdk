@@ -172,10 +172,33 @@ export class IntentParser {
         // Add extracted constraints
         if (entities.constraints) {
             entities.constraints.forEach((c: any) => {
-                if (c.type === "slippage") {
-                    constraints.maxSlippage = c.value;
+                switch (c.type) {
+                    case "slippage":
+                        constraints.maxSlippage = c.value;
+                        break;
+                    case "deadline":
+                        constraints.deadline = c.value;
+                        break;
+                    case "gas":
+                    case "maxGas":
+                        constraints.maxGasCost = c.value;
+                        break;
+                    case "dex":
+                    case "preferredDEX":
+                        constraints.preferredDEXs = Array.isArray(c.value) ? c.value : [c.value];
+                        break;
+                    case "protocols":
+                    case "minProtocols":
+                        constraints.minProtocols = c.value;
+                        break;
+                    case "priority":
+                        constraints.priority = c.value;
+                        break;
+                    default:
+                        // Store unknown constraints in a generic bucket
+                        constraints[c.type] = c.value;
+                        break;
                 }
-                // TODO: Map other constraints
             });
         }
 
