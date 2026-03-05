@@ -111,8 +111,7 @@ export function toBridgeIntent(intent: SolverIntent): BridgeIntent | null {
         !params.sourceChain ||
         !params.targetChain ||
         !params.inputToken ||
-        !params.inputAmount ||
-        !params.recipient
+        !params.inputAmount
     ) {
         return null;
     }
@@ -122,7 +121,8 @@ export function toBridgeIntent(intent: SolverIntent): BridgeIntent | null {
         targetChain: Number(params.targetChain) as ChainId,
         token: params.inputToken,
         amount: params.inputAmount,
-        recipient: params.recipient as Address,
+        // For bridge intents, recipient defaults to the submitting user's address
+        recipient: (params.recipient ?? intent.user) as Address,
         maxSlippage: intent.parsedIntent.constraints.maxSlippage ?? 50,
     };
 }

@@ -25,6 +25,7 @@ function buildSolver(): IntentSolver {
     return new IntentSolver({
         agent: {
             privateKey: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // hardhat #0
+            name: "TestSolver",
             mode: "simulate",
             supportedChains: [1, 137],
             supportedTokens: ["USDC", "USDT", "ETH"],
@@ -66,11 +67,20 @@ describe("T9: Parser → Solver pipeline", () => {
         (solver.agent as any).status = "idle";
         (solver.agent as any).agentAddress = "0x" + "ab".repeat(20);
         // Pre-populate inventory so canFulfill() passes for bridge intents
+        // balances Map values must be InventoryBalance { chainId, token, available, locked, lastUpdated }
         const inv = solver.inventoryManager;
-        inv["balances"].set(`1:USDC`, 10_000_000_000n); // 10k USDC on ETH
-        inv["balances"].set(`137:USDC`, 10_000_000_000n); // 10k USDC on Polygon
-        inv["balances"].set(`1:USDT`, 10_000_000_000n);
-        inv["balances"].set(`137:USDT`, 10_000_000_000n);
+        const now = Date.now();
+        const makeBalance = (chainId: number, token: string, amount: bigint) => ({
+            chainId,
+            token,
+            available: amount,
+            locked: 0n,
+            lastUpdated: now,
+        });
+        inv["balances"].set("1:USDC", makeBalance(1, "USDC", 10_000_000_000n));
+        inv["balances"].set("137:USDC", makeBalance(137, "USDC", 10_000_000_000n));
+        inv["balances"].set("1:USDT", makeBalance(1, "USDT", 10_000_000_000n));
+        inv["balances"].set("137:USDT", makeBalance(137, "USDT", 10_000_000_000n));
     });
 
     test("parsed bridge intent can be checked with canSolve (simulate mode)", () => {

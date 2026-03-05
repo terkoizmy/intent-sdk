@@ -26,7 +26,8 @@
 7. [Inventory Management](#-inventory-management)
 8. [Fee Pricing System](#-fee-pricing-system)
 9. [Settlement & Proof Generation](#-settlement--proof-generation)
-10. [Environment Configuration](#-environment-configuration)
+10. [➕ Adding Custom Chains](#-adding-custom-chains)
+11. [Environment Configuration](#-environment-configuration)
 
 ---
 
@@ -649,6 +650,153 @@ const proof = await solver.proofGenerator.generateSignatureProof({
 //   solverSignature: "0x...",      // EIP-191 signature
 //   signedData: { intentId, txHash, amount, recipient, timestamp }
 // }
+```
+
+## ➕ Adding Custom Chains
+
+The SDK is designed to support **any EVM-compatible chain** — not just the built-in ones. You can add any chain by providing a `ChainConfig` object with the chain's metadata.
+
+### Built-in Chains
+
+Out of the box, the SDK includes:
+
+| Chain | ID |
+|-------|-----|
+| Ethereum | 1 |
+| Polygon | 137 |
+| Arbitrum One | 42161 |
+
+### How to Add a Custom Chain
+
+**Step 1 — Define the `ChainConfig`:**
+
+```typescript
+import type { ChainConfig } from "@terkoizmy/intent-sdk";
+
+const BASE_CONFIG: ChainConfig = {
+    id: 8453,                                    // EVM chain ID (required)
+    name: "Base",                                // Human-readable name (required)
+    rpcUrl: "https://mainnet.base.org",          // Primary RPC (required)
+    fallbackRpcUrls: [                           // Fallbacks tried in order if primary fails
+        "https://base-rpc.publicnode.com",
+        "https://rpc.ankr.com/base",
+    ],
+    nativeCurrency: {                            // Native gas token
+        name: "Ether",
+        symbol: "ETH",
+        decimals: 18,
+    },
+    explorer: "https://basescan.org",            // Block explorer URL
+    contracts: {
+        usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",    // USDC on Base
+        intentSettlement: "0xYOUR_CONTRACT_ON_BASE",             // Optional — for live settlement
+    },
+    blockTimeSeconds: 2,                         // Average block time (used for confirmation ETA)
+    confirmations: 12,                           // Confirmations to wait before generating proof
+};
+```
+
+**Step 2 — Add the chain ID to `supportedChains` and provide an RPC URL:**
+
+```typescript
+import { createIntentSDK } from "@terkoizmy/intent-sdk";
+
+const { solver } = createIntentSDK({
+    solver: {
+        agent: {
+            privateKey: process.env.SOLVER_PRIVATE_KEY!,
+            mode: "live",
+            supportedChains: [1, 137, 42161, 8453],     // ← add your chain ID here
+            supportedTokens: ["USDC", "USDT"],
+        },
+        contractAddress: "0x...",
+        rpcUrls: {
+            1:    process.env.ETH_RPC_URL!,
+            137:  process.env.POLYGON_RPC_URL!,
+            42161: process.env.ARB_RPC_URL!,
+            8453: "https://mainnet.base.org",           // ← RPC for your custom chain
+        },
+    },
+});
+
+// Register the chain config directly into the solver's registry
+solver.chainRegistry.register(BASE_CONFIG);
+
+await solver.initialize();
+```
+
+**Step 3 — Register any new tokens used on that chain:**
+
+```typescript
+// If the chain uses a token not already in the TokenRegistry:
+solver.tokenRegistry.register({
+    symbol: "USDC",
+    name: "USD Coin",
+    decimals: 6,
+    addresses: {
+        8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    },
+});
+```
+
+### `ChainConfig` Field Reference
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | `number` | ✅ | EVM chain ID |
+| `name` | `string` | ✅ | Human-readable name |
+| `rpcUrl` | `string` | ✅ | Primary JSON-RPC endpoint |
+| `fallbackRpcUrls` | `string[]` | ✅ | Fallback endpoints (at least 1 recommended) |
+| `nativeCurrency` | `{ name, symbol, decimals }` | ✅ | Gas token info |
+| `explorer` | `string` | ✅ | Block explorer base URL |
+| `contracts.usdc` | `Address` | Optional | USDC token address on this chain |
+| `contracts.intentSettlement` | `Address` | Optional | Deployed settlement contract address |
+| `blockTimeSeconds` | `number` | Optional | Avg block time (for confirmation time estimates) |
+| `confirmations` | `number` | Optional | Blocks to wait before generating proof (default: 12) |
+
+### Important Notes
+
+> **The chain must also be in `supportedChains` in your agent config** — the registry stores metadata, but the agent only processes intents for chains explicitly listed in `supportedChains`.
+
+> **For live settlement, deploy `IntentSettlement.sol` on your custom chain.** Run: `cd contracts && npx hardhat run deploy/deploy-unichain-sepolia.ts --network <yourNetwork>` and set `contracts.intentSettlement` to the proxy address.
+
+> **For simulate mode**, no on-chain deployment is needed — the solver generates fake `txHash` values without touching the network.
+
+### Example: Adding Multiple Custom Chains at Once
+
+```typescript
+import { SUPPORTED_CHAINS } from "@terkoizmy/intent-sdk";
+import type { ChainConfig } from "@terkoizmy/intent-sdk";
+
+const CUSTOM_CHAINS: ChainConfig[] = [
+    {
+        id: 8453,
+        name: "Base",
+        rpcUrl: "https://mainnet.base.org",
+        fallbackRpcUrls: ["https://base-rpc.publicnode.com"],
+        nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+        explorer: "https://basescan.org",
+        contracts: { usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" },
+        blockTimeSeconds: 2,
+        confirmations: 12,
+    },
+    {
+        id: 59144,
+        name: "Linea",
+        rpcUrl: "https://rpc.linea.build",
+        fallbackRpcUrls: ["https://linea-rpc.publicnode.com"],
+        nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+        explorer: "https://lineascan.build",
+        contracts: { usdc: "0x176211869cA2b568f2A7D4EE941E073a821EE1ff" },
+        blockTimeSeconds: 2,
+        confirmations: 12,
+    },
+];
+
+// Register all custom chains
+for (const chain of CUSTOM_CHAINS) {
+    solver.chainRegistry.register(chain);
+}
 ```
 
 ---
