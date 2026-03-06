@@ -1,6 +1,6 @@
 {
   "name": "@terkoizmy/intent-sdk",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Lightweight intent parser & solver SDK for blockchain transactions — parse natural language into structured intents, solve cross-chain bridges, and settle on-chain",
   "type": "module",
   "main": "./dist/index.js",
