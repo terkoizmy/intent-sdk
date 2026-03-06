@@ -23,6 +23,7 @@ import { MempoolClient } from "./mempool/mempool-client";
 import { IntentFilter } from "./mempool/intent-filter";
 import { SolutionSubmitter } from "./mempool/solution-submitter";
 import { ProfitTracker } from "./monitoring/profit-tracker";
+import { createViemProviderFactory } from "../shared/rpc/viem-provider";
 
 import { ethers } from "ethers";
 
@@ -30,6 +31,7 @@ import type { SolverIntent } from "./types/intent";
 import type { SolutionResult } from "./types/agent";
 import type { PricingResult } from "./types/pricing";
 import type { Hash, ChainId, Address } from "../types/common";
+import type { ChainConfig } from "../types/chain";
 
 export class IntentSolver {
     public readonly config: LiquidityAgentConfig;
@@ -62,7 +64,7 @@ export class IntentSolver {
         this.chainRegistry = new ChainRegistry();
         this.chainRegistry.registerAll(SUPPORTED_CHAINS);
         this.tokenRegistry = new TokenRegistry();
-        this.rpcProviderManager = new RPCProviderManager();
+        this.rpcProviderManager = new RPCProviderManager(createViemProviderFactory());
 
         const signerFactory = (privateKey: string, chainId: ChainId) => {
             // Provide a basic wrapper compatible with both ethers and our WalletSigner interface
@@ -140,6 +142,19 @@ export class IntentSolver {
             this.agent,
             this.solutionSubmitter
         );
+    }
+
+    /**
+     * Safely registers a custom chain and its tokens across all internal registries.
+     * Call this instead of modifying `chainRegistry` directly if you want inventory tracking.
+     */
+    public registerCustomChain(config: ChainConfig, tokens: any[] = []) {
+        this.chainRegistry.register(config);
+        this.rpcProviderManager.registerChain(config);
+        
+        for (const t of tokens) {
+            this.tokenRegistry.register(t);
+        }
     }
 
     /**

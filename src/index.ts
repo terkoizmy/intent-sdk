@@ -19,6 +19,7 @@
 export { createIntentSDK } from "./sdk-factory";
 export { IntentParser } from "./parser";
 export { IntentSolver } from "./solver";
+export { createViemProviderFactory } from "./shared/rpc/viem-provider";
 
 
 // ─── Parser Types ───────────────────────────────
